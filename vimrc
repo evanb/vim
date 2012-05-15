@@ -310,7 +310,7 @@ nnoremap <silent>-- <C-w><
 inoremap jk <esc>
 inoremap kj <esc>
 " inoremap ; <esc>
-inoremap <esc> <nop>
+"inoremap <esc> <nop>
 
 " make better use of H and L
 map H ^
