@@ -1,33 +1,72 @@
 
-" Preamble ---------------------------------------------------------------- {{{
+" Bundles ---------------------------------------------------------------- {{{
 
-let g:pathogen_disabled=[]
-if !has("python")
-  call add(g:pathogen_disabled, 'headlights')
+" gets rid of all the crap that Vim does to be vi compatible
+set nocompatible
+
+filetype off  
+
+set rtp+=~/.vim/bundle/vundle/
+call vundle#rc()
+
+" let Vundle manage Vundle
+Bundle 'gmarik/vundle'
+
+Bundle 'vim-scripts/L9'
+Bundle 'vim-scripts/EasyGrep'
+Bundle 'vim-scripts/taglist.vim'
+Bundle 'vim-scripts/buftabs'
+Bundle 'vim-scripts/AutoTag'
+Bundle 'vim-scripts/ScrollColors'
+Bundle 'scrooloose/nerdtree'
+Bundle 'tpope/vim-fugitive'
+Bundle 'tpope/vim-markdown'
+Bundle 'tpope/vim-repeat'
+Bundle 'tpope/vim-unimpaired'
+Bundle 'tpope/vim-surround'
+Bundle 'scrooloose/syntastic'
+Bundle 'scrooloose/nerdcommenter'
+Bundle 'Shougo/neocomplcache'
+Bundle 'Shougo/neocomplcache-snippets-complete'
+Bundle 'kien/ctrlp.vim'
+Bundle 'timcharper/textile.vim'
+Bundle 'godlygeek/tabular'
+Bundle 'tsaleh/vim-matchit'
+Bundle 'Lokaltog/vim-powerline'
+Bundle 'ton/vim-bufsurf'
+Bundle 'shemerey/vim-peepopen'
+Bundle 'mileszs/ack.vim'
+
+" color schemes
+Bundle 'Zenburn'
+Bundle 'molokai'
+
+if has("python")
+  Bundle 'sjl/gundo.vim'
+  Bundle 'mbadran/headlights'
+  Bundle 'vim-scripts/slimv.vim'
 endif
 
-" load pathogen (all plugins in the bundles folder)
-filetype off
-call pathogen#infect()
-call pathogen#helptags()
 filetype plugin indent on
 
 " }}}
 
 " Basic options ----------------------------------------------------------- {{{
 
-"set font and color scheme
-" colorscheme zenburn
-colorscheme molokai-rufiao
+" patch the color scheme after it's loaded
+augroup patchcolorscheme
+  autocmd ColorScheme * highlight VertSplit guifg=#2e3330 guibg=#2e3330
+augroup END
 
-" gets rid of all the crap that Vim does to be vi compatible
-set nocompatible
+" set color scheme
+colorscheme zenburn
+let g:zenburn_old_Visual = 1
 
 " prevents some security exploits having to do with modelines in files
 " see http://lists.alioth.debian.org/pipermail/pkg-vim-maintainers/2007-June/004020.html
 set modelines=0
 
-" tab setttings. expand tabs to spaces, use width 4
+" tab setttings. expand tabs to spaces, use width 2
 " see http://vimcasts.org/episodes/tabs-and-spaces/
 set tabstop=2
 set shiftwidth=2
@@ -43,7 +82,7 @@ set foldlevelstart=20
 
 " just make things better
 set encoding=utf-8
-set scrolloff=3
+set scrolloff=1
 set autoindent
 set showmode! " disable showmode, as powerline shows it
 set showcmd
@@ -55,7 +94,6 @@ set ttyfast
 set ruler
 set backspace=indent,eol,start
 set laststatus=2
-set number
 set nonumber
 
 " ignore binary files
@@ -91,13 +129,13 @@ set hlsearch
 "set colorcolumn=120
 
 " Set region to British English
-set spelllang=en_gb
+"set spelllang=en_gb
 
 " use the same symbols as TextMate for tabstops and EOLs
 set listchars=tab:▸\ ,eol:¬
 
 " folders
-silent execute '!mkdir -p ~/.vim/tmp && for i in backup swap view undo fuf tags; do mkdir -p ~/.vim/tmp/$i; done'
+silent execute '!mkdir -p ~/.vim/tmp && for i in backup swap view undo fuf; do mkdir -p ~/.vim/tmp/$i; done'
 set backupdir=~/.vim/tmp/backup/
 set directory=~/.vim/tmp/swap/
 set viewdir=~/.vim/tmp/view/
@@ -113,9 +151,6 @@ set backup
 "  %     :  saves and restores the buffer list
 "  n...  :  where to save the viminfo files
 set viminfo='100,\"1000,:100,n~/.vim/tmp/viminfo
-
-" improve autocomplete menu color
-highlight Pmenu ctermbg=238 gui=bold
 
 function! MyFoldText() " {{{
   let line = getline(v:foldstart)
@@ -133,6 +168,9 @@ function! MyFoldText() " {{{
   return line . '…' . repeat(" ",fillcharcount) . foldedlinecount . '…' . ' '
 endfunction " }}}
 set foldtext=MyFoldText()
+
+" allow _ to separate words
+" set iskeyword-=_
 
 " }}}
 
@@ -188,9 +226,15 @@ augroup END
 " autocmd WinEnter * call AutoResize()
 
 " Leave insert mode after 15 seconds of no input: 
-au CursorHoldI * stopinsert 
-au InsertEnter * let updaterestore=&updatetime | set updatetime=15000 
-au InsertLeave * let &updatetime=updaterestore
+" au CursorHoldI * stopinsert 
+" au InsertEnter * let updaterestore=&updatetime | set updatetime=15000 
+" au InsertLeave * let &updatetime=updaterestore
+
+" Don't screw up folds when inserting text that might affect them, until leaving insert mode. 
+" Foldmethod is local to the window.
+" This also avoids folds to slow down vim while in edit mode
+autocmd InsertEnter * if !exists('w:last_fdm') | let w:last_fdm=&foldmethod | setlocal foldmethod=manual | endif
+autocmd InsertLeave,WinLeave * if exists('w:last_fdm') | let &l:foldmethod=w:last_fdm | unlet w:last_fdm | endif
 
 " }}}
 
@@ -226,6 +270,10 @@ au InsertLeave * let &updatetime=updaterestore
 
 " Laguages ---------------------------------------------------------------- {{{
 
+" omnicomplete
+set ofu=syntaxcomplete#Complete
+"inoremap <C-space> <C-x><C-o>
+
 " ruby file types
 au BufNewFile,BufRead [vV]agrantfile     set filetype=ruby
 au BufNewFile,BufRead Gemfile            set filetype=ruby
@@ -233,10 +281,24 @@ au BufNewFile,BufRead Capfile            set filetype=ruby
 au BufNewFile,BufRead [rR]akefile,*.rake set filetype=ruby
 
 " ruby autocomplete
-autocmd FileType ruby,eruby set omnifunc=rubycomplete#Complete
-autocmd FileType ruby,eruby let g:rubycomplete_buffer_loading = 1
-autocmd FileType ruby,eruby let g:rubycomplete_rails = 1
-autocmd FileType ruby,eruby let g:rubycomplete_classes_in_global = 1
+if has("ruby")
+  autocmd FileType ruby,eruby set omnifunc=rubycomplete#Complete
+  autocmd FileType ruby,eruby let g:rubycomplete_buffer_loading = 1
+  autocmd FileType ruby,eruby let g:rubycomplete_rails = 1
+  autocmd FileType ruby,eruby let g:rubycomplete_classes_in_global = 1
+endif
+
+if has("python")
+  autocmd FileType python setlocal omnifunc=pythoncomplete#Complete
+end
+
+autocmd FileType css setlocal omnifunc=csscomplete#CompleteCSS
+autocmd FileType html,markdown setlocal omnifunc=htmlcomplete#CompleteTags
+autocmd FileType javascript setlocal omnifunc=javascriptcomplete#CompleteJS
+autocmd FileType xml setlocal omnifunc=xmlcomplete#CompleteTags
+
+exec "set tags=".fnamemodify('.',':p:p')."tags"
+exec "set tags+=".fnamemodify('.',':p:p')."../tags"
 
 " use markers for folds in .vimrc and other vim files
 autocmd FileType vim setlocal foldmethod=marker
@@ -245,13 +307,25 @@ autocmd FileType vim setlocal foldmethod=marker
 autocmd BufWinLeave .* mkview
 autocmd BufWinEnter .* silent loadview
 
+" disable auto comments
+autocmd FileType * setlocal formatoptions-=c formatoptions-=r formatoptions-=o
+
+" lisp rainbow parens
+let g:lisp_rainbow=1
+
+" slimv repl syntax coloring
+let g:slimv_repl_syntax = 1
+
+" open repl in a vertical split on the right
+let g:slimv_repl_split = 4
+
 " }}}
 
 " Basic mappings ---------------------------------------------------------- {{{
 
-" clear out a search by typing ,,<space>
+" clear out a search by typing ,<space>
 nnoremap <leader><space> :noh<cr>
- 
+
 "make < > shifts keep selection
 vnoremap < <gv
 vnoremap > >gv
@@ -307,10 +381,9 @@ nnoremap <silent>-- <C-w><
 " nnoremap <leader>v V`]
 
 " remap ESC
-inoremap jk <esc>
-inoremap kj <esc>
+inoremap jj <esc>
 " inoremap ; <esc>
-"inoremap <esc> <nop>
+" inoremap <esc> <nop>
 
 " make better use of H and L
 map H ^
@@ -318,10 +391,6 @@ map L $
 
 " make better use of ;
 nnoremap ; :
-
-" ,w/W for horizontal/vertical splits
-nnoremap <leader>w <C-w>v<C-w>l
-nnoremap <leader>W <C-w>s<C-w>j
 
 " ,z to zoom in/out splits
 " nnoremap <leader>z <C-w>o
@@ -440,29 +509,69 @@ let NERDChristmasTree=1
 let NERDTreeMouseMode=3
 let NERDTreeBookmarksFile=$HOME.'/vim/tmp/NERDTreeBookmarks'
 let NERDTreeShowHidden=1
+let NERDTreeDirArrows=1
 
 " Ctrl-P
 let g:ctrlp_match_window_bottom = 0
 let g:ctrlp_match_window_reversed = 0
 let g:ctrlp_cache_dir = $HOME.'/.vim/tmp/ctrlp'
 
+" nerdcommenter
+let g:NERDCreateDefaultMappings = 0
+
 " buftabs
 :let g:buftabs_only_basename=1
 
 " easytags
-let g:easytags_cmd = '/usr/local/bin/ctags'
-let g:easytags_file = '~/.vim/tmp/tags/all'
-let g:easytags_by_filetype = '~/.vim/tmp/tags/'
+" let g:easytags_cmd = '/usr/local/bin/ctags'
+" let g:easytags_file = '~/.vim/tmp/easytags/all'
+" let g:easytags_by_filetype = '~/.vim/tmp/easytags/'
 " set tags=./tags;
 " let g:easytags_dynamic_files = 1
+
+" neocomplcache
+" disable AutoComplPop.
+let g:acp_enableAtStartup = 0
+" use neocomplcache.
+let g:neocomplcache_enable_at_startup = 1
+" use smartcase.
+let g:neocomplcache_enable_smart_case = 1
+" use camel case completion.
+let g:neocomplcache_enable_camel_case_completion = 1
+" use underbar completion.
+let g:neocomplcache_enable_underbar_completion = 1
+" set minimum syntax keyword length.
+let g:neocomplcache_min_syntax_length = 3
+let g:neocomplcache_lock_buffer_name_pattern = '\*ku\*'
+" key-mappings.
+imap <C-k> <Plug>(neocomplcache_snippets_expand)
+smap <C-k> <Plug>(neocomplcache_snippets_expand)
+inoremap <expr><C-g> neocomplcache#undo_completion()
+inoremap <expr><C-l> neocomplcache#complete_common_string()
+" <CR>: close popup and save indent.
+inoremap <expr><CR>  neocomplcache#smart_close_popup() . "\<CR>"
+" <TAB>: completion.
+inoremap <expr><TAB>  pumvisible() ? "\<C-n>" : "\<TAB>"
+" <C-h>, <BS>: close popup and delete backword char.
+inoremap <expr><C-h> neocomplcache#smart_close_popup()."\<C-h>"
+inoremap <expr><BS> neocomplcache#smart_close_popup()."\<C-h>"
+inoremap <expr><C-y>  neocomplcache#close_popup()
+inoremap <expr><C-e>  neocomplcache#cancel_popup()
+" enable heavy omni completion.
+if !exists('g:neocomplcache_omni_patterns')
+  let g:neocomplcache_omni_patterns = {}
+endif
+let g:neocomplcache_omni_patterns.ruby = '[^. *\t]\.\w*\|\h\w*::'
+let g:neocomplcache_omni_patterns.php = '[^. \t]->\h\w*\|\h\w*::'
+let g:neocomplcache_omni_patterns.c = '\%(\.\|->\)\h\w*'
+let g:neocomplcache_omni_patterns.cpp = '\h\w*\%(\.\|->\)\h\w*\|\h\w*::'
 
 " }}}
 
 " Plugin mappings --------------------------------------------------------- {{{
 
 " peepopen
-" map ,, :PeepOpen<cr><cr>
-" map <leader><space> :PeepOpen<cr><cr>
+map <leader><space> :PeepOpen<cr><cr>
 
 " ,t opens ctrlp
 let g:ctrlp_map = '<leader>t'
@@ -480,11 +589,33 @@ nnoremap <leader>g :Grep<space>
 " ,y toggles nerdtree
 nnoremap <leader>y :NERDTreeToggle<cr>
 
+" \\ toggles comments
+nnoremap \\ :call NERDComment("n", "toggle")<CR>
+vnoremap \\ :call NERDComment("n", "toggle")<CR>gv
+
 " ,h shows yankring history
 " nnoremap <leader>v :YRShow<cr>
 
 " nerdtree
 " nnoremap <d-d> :NERDTreeToggle<cr>
+
+" Waldo
+if ! exists("g:waldo_loaded")
+  let g:waldo_loaded = 1
+  let s:save_cpo = &cpo
+  set cpo&vim
+  function s:LaunchWaldoViaVim()
+    let cwd = getcwd()
+    silent exe  "!open -a Waldo " . shellescape(cwd)
+    silent exe  "!open -a Waldo " . shellescape(cwd)
+  endfunction
+  command! Waldo :call <SID>LaunchWaldoViaVim()
+  noremap <unique> <script> <Plug>Waldo <SID>Launch
+  noremap <SID>Launch :call <SID>LaunchWaldoViaVim()<CR>
+  if !hasmapto('<Plug>Waldo')
+    map <unique> <silent> <Leader>f <Plug>Waldo
+  endif
+endif
 
 " }}}
 
